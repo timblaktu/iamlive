@@ -128,40 +128,30 @@ export AWS_CSM_HOST=127.0.0.1
 
 ### Proxy Mode
 
-Proxy mode will serve a local HTTP(S) server (by default at `http://127.0.0.1:10080`) that will inspect requests sent to the AWS endpoints before forwarding on to generate IAM policy statements with both `Action` and `Resource` keys. The CA key/certificate pair will be automatically generated and stored within `~/.iamlive/` by default.
+Proxy mode will serve a local HTTP(S) server (by default at `http://127.0.0.1:10080`) that will inspect requests en route to AWS endpoints, enabling `iamlive` to generate IAM policy statements with both `Action` and `Resource` keys. The CA key/certificate bundle is automatically generated and stored in a configurable location (`~/.iamlive/` by default).
 
-#### CLI
+#### Configuration
+Four settings are required for proper operation of iamlive proxy mode. All of these are controlled through  environment variables, and the AWS-specific one also has a corresponding [AWS CLI configuration file setting](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html#cli-config-ca_bundle):
 
-To set the appropriate CA bundle in the AWS CLI, you should either use the `--set-ini` option or add the following to the relevant profile in `.aws/config`:
+##### [AWS_CA_BUNDLE](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-envvars.html#envvars-list)
+> Specifies the path to a certificate bundle to use for HTTPS certificate validation.
+> 
+> If defined, this environment variable overrides the value for the profile setting [ca_bundle](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html#cli-config-ca_bundle). You can override this environment variable by using the [--ca-bundle](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-options.html#cli-configure-options-ca-bundle) command line parameter.
 
-```
-ca_bundle = ~/.iamlive/ca.pem
-```
+`iamlive`'s `--set-ini` option automatically sets `ca_bundle` in your `.aws/config` profile during the monitoring session, and clears it when the session completes.
 
-Alternatively, you can run the following in the window executing your CLI commands:
+##### HTTP_PROXY,  HTTPS_PROXY, NO_PROXY
 
-```
-export AWS_CA_BUNDLE=~/.iamlive/ca.pem
-```
-
-You must also set the proxy settings for your session by running the following in the window executing your CLI commands:
+These conventional environment variables control proxying behavior of many client applications (e.g.  [wget](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-proxy.html) and  [curl](https://everything.curl.dev/usingcurl/proxies/env)), most notably the [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-proxy.html). These must be exported in the shell of your CLI client session, e.g.:
 
 ```
-export HTTP_PROXY=http://127.0.0.1:10080
-export HTTPS_PROXY=http://127.0.0.1:10080
+export {HTTP,HTTPS}_PROXY=http://127.0.0.1:10080
+export NO_PROXY=eks.amazonaws.com,github.com
 ```
 
-#### SDKs
+Will forward _all_ http and https traffic, _except_ to endpoints at domains `eks.amazonaws.com` and `github.com`, to a proxy at localhost port 10080.
 
-To enable CSM in the various AWS SDKs, you can run the following in the window executing your application prior to it starting:
-
-```
-export HTTP_PROXY=http://127.0.0.1:10080
-export HTTPS_PROXY=http://127.0.0.1:10080
-export AWS_CA_BUNDLE=~/.iamlive/ca.pem
-```
-
-Check the [official docs](https://docs.aws.amazon.com/credref/latest/refdocs/setting-global-ca_bundle.html) for further details on setting the CA bundle.
+Note that it's important that the http and https proxy addresses are the same, as [instructed by the AWS CLI docs](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-proxy.html).
 
 ## FAQs
 
